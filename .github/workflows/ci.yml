@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0
+        with:
+          python-version: "3.12"
+      - name: Validate bootstrap policy
+        run: |
+          python - <<'PY'
+          import tomllib
+          from pathlib import Path
+          policy = tomllib.loads(Path(".github/merge-guard.toml").read_text())
+          assert policy["repository"]["name"] == "mikomiel/vikunja-agent-mcp"
+          assert policy["review"]["carry_unchanged_diff"] is False
+          for filename in ("LICENSE", "README.md", "CONTRIBUTING.md", "SECURITY.md"):
+              assert Path(filename).is_file(), filename
+          PY
+      - name: Check and build the package
+        if: hashFiles('pyproject.toml') != ''
+        run: |
+          python -m pip install --disable-pip-version-check uv==0.13.8
+          uv sync --frozen
+          uv lock --check
+          uv run ruff check .
+          uv run pytest -q
+          uv build
+
+  public-content:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Scan public tree, patches and commit messages
+        shell: bash
+        run: |
+          set -euo pipefail
+          scan_dir=$(mktemp -d)
+          curl --fail --location --silent --show-error --max-time 60 \
+            --max-filesize 33554432 \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            --output "$scan_dir/gitleaks.tar.gz"
+          printf '%s  %s\n' '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' \
+            "$scan_dir/gitleaks.tar.gz" | sha256sum --check -
+          tar --extract --gzip --file "$scan_dir/gitleaks.tar.gz" --directory "$scan_dir" gitleaks
+          "$scan_dir/gitleaks" git --redact=100 --no-banner --log-opts='--all' .
+          "$scan_dir/gitleaks" dir --redact=100 --no-banner .
+          git log --all --format=%B | "$scan_dir/gitleaks" stdin --redact=100 --no-banner
+          python3 scripts/check_estate_identifiers.py
+          mkdir "$scan_dir/history"
+          git log --all --format=%B --patch > "$scan_dir/history/commits.txt"
+          scanner="$PWD/scripts/check_estate_identifiers.py"
+          (cd "$scan_dir/history" && python3 "$scanner")
+
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294
+        with:
+          comment-summary-in-pr: never

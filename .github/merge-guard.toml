@@ -1,0 +1,17 @@
+[repository]
+name = "mikomiel/vikunja-agent-mcp"
+base_branch = "main"
+
+[review]
+reviewer_id = 351676210
+reviewer_login = "ecomwizards-gandalf[bot]"
+reviewer_type = "Bot"
+required_checks = ["checks", "public-content", "dependency-review"]
+gate_context = "review"
+review_workflow = "merge-guard-review.yml"
+merge_workflow = "merge-guard-merge.yml"
+carry_unchanged_diff = false
+
+[paths]
+ordinary = ["src/vikunja_agent_mcp/**", "README.md", "CHANGELOG.md", "docs/**", "openspec/**"]
+dependency_update_exemption = false

@@ -1,0 +1,14 @@
+schema: spec-driven
+
+context: |
+  Vikunja Agent MCP connects agents to Vikunja API v2.
+  Product builds and tests use synthetic data.
+  The installed package is the public tool contract. Deployers configure credentials and project policy.
+
+rules:
+  proposal:
+    - Name the existing behavior and the user-visible change.
+  specs:
+    - Include success, refusal, and recovery scenarios where relevant.
+  tasks:
+    - Record checks against an installed artifact for installation changes.

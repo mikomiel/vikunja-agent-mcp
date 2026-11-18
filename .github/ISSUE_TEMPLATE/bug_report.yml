@@ -1,0 +1,17 @@
+name: Report a bug
+description: Report a reproducible problem with the MCP server.
+labels: [bug]
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the Vikunja version, MCP client, relevant settings with sensitive values removed, and the smallest steps to reproduce.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected and observed behavior
+    validations:
+      required: true

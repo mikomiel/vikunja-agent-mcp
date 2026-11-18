@@ -1,0 +1,11 @@
+name: Request a feature
+description: Describe a use case the project could support.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use case
+      description: Explain what the agent should be able to do and how to verify it.
+    validations:
+      required: true
